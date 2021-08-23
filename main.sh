@@ -3,8 +3,8 @@
 BASE=$1
 
 echo "Azure CLI extensionのインストール"
-az extension add --name account
-az extension add --name azure-iot
+az extension add -y --name account
+az extension add -y --name azure-iot
 
 echo "サブスクリプションIDの取得"
 SUBSCRIPTION_ID=$(az account subscription list --only-show-errors --query '[0].subscriptionId' -o tsv)
@@ -28,7 +28,7 @@ echo "ストレージアカウント接続文字列の取得"
 CONNECT_STR=$(az storage account show-connection-string -g $BASE -n "${BASE}sa" --query 'connectionString' -o tsv)
 
 echo "Blobコンテナの作成"
-az storage container create -n iot -g $BASE --account-name "${BASE}sa" --auth-mode login
+az storage container create -n iot -g $BASE --account-name "${BASE}sa" --auth-mode key --connection-string $CONNECT_STR
 
 echo "IoT Hubカスタムエンドポイントの作成（コールドパス）"
 az iot hub routing-endpoint create -n coldpath -r $BASE -s $SUBSCRIPTION_ID -t azurestoragecontainer --hub-name "${BASE}IoTHub" -c $CONNECT_STR --container iot --encoding json
