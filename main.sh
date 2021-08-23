@@ -2,8 +2,12 @@
 
 BASE=$1
 
+echo "Azure CLI extensionのインストール"
+az extension add --name account
+az extension add --name azure-iot
+
 echo "サブスクリプションIDの取得"
-SUBSCRIPTION_ID=$(az account subscription list --only-show-errors | jq '.[0].subscriptionId')
+SUBSCRIPTION_ID=$(az account subscription list --only-show-errors --query '[0].subscriptionId' -o tsv)
 
 echo "リソースグループの作成"
 az group create -n $BASE --location japaneast
@@ -21,10 +25,10 @@ echo "ストレージアカウントの作成"
 az storage account create -n "${BASE}sa" -g $BASE --access-tier Cool --sku Standard_LRS --allow-blob-public-access false
 
 echo "ストレージアカウント接続文字列の取得"
-CONNECT_STR=$(az storage account show-connection-string -g $BASE -n "${BASE}sa" | jq -r '.connectionString')
+CONNECT_STR=$(az storage account show-connection-string -g $BASE -n "${BASE}sa" --query 'connectionString' -o tsv)
 
 echo "Blobコンテナの作成"
-az storage container create -n iot -g $BASE --account-name "${BASE}sa" --auth-mode login --public-access off
+az storage container create -n iot -g $BASE --account-name "${BASE}sa" --auth-mode login
 
 echo "IoT Hubカスタムエンドポイントの作成（コールドパス）"
 az iot hub routing-endpoint create -n coldpath -r $BASE -s $SUBSCRIPTION_ID -t azurestoragecontainer --hub-name "${BASE}IoTHub" -c $CONNECT_STR --container iot --encoding json
@@ -57,7 +61,7 @@ echo "Service Busキューの承認規則の作成"
 az servicebus queue authorization-rule create -g $BASE --namespace-name "${BASE}SBus" --queue-name iotqueue -n iotqueuerule --rights Send
 
 echo "Service Busキューの接続文字列の取得"
-QUEUE_CONNECT_STR=$(az servicebus queue authorization-rule keys list -n iotqueuerule -g $BASE --namespace-name "${BASE}SBus" --queue-name iotqueue | jq -r '.primaryConnectionString')
+QUEUE_CONNECT_STR=$(az servicebus queue authorization-rule keys list -n iotqueuerule -g $BASE --namespace-name "${BASE}SBus" --queue-name iotqueue --query 'primaryConnectionString' -o tsv)
 
 echo "IoT Hubカスタムエンドポイントの作成（ホットパス）"
 az iot hub routing-endpoint create -n hotpath -r $BASE -s $SUBSCRIPTION_ID -t servicebusqueue --hub-name "${BASE}IoTHub" -c $QUEUE_CONNECT_STR
